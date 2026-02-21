@@ -1,0 +1,9 @@
+docling==2.72.0     
+dotenv==0.9.9
+langchain==1.2.9
+langchain-docling==2.0.0
+langchain-huggingface==1.2.0
+langchain-openai==1.1.7
+langchain-qdrant==1.1.0
+langgraph==1.0.8
+sentence-transformers==5.2.2
