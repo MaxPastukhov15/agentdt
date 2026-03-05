@@ -6,7 +6,7 @@ from langchain_core.documents import Document
 from dotenv import load_dotenv
 import os
 import hashlib
-from typing import List
+from typing import List, Self
 from pathlib import Path
 from langchain_pymupdf4llm import PyMuPDF4LLMLoader
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
@@ -14,7 +14,6 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from datetime import datetime
 import logging
 import logger_config
-import atexit
 
 logger = logging.getLogger("db")
 
@@ -47,28 +46,44 @@ class VectorRepository:
         
         self.markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[("#", "Header 1"), ("##", "Header 2")])
 
-        atexit.register(self.__close)
 
-    def __enter__(self):
+    def __enter__(self)-> Self:
         logger.info(f"Connection with the {self.client} has been established")
         return self
-    
-    def __exit__(self, exc_type, exc_value, traceback):
+
+
+    def __exit__(self, exc_type, exc_value, traceback)-> None:
         if exc_type:
             logger.error(f"Client {self.client} is closed incorrectly")
         self.__close()
-    
+
+
+    def _normalize_path(self, file_path: Path)->str:
+        abs_path = file_path.absolute()
+
+        return str(abs_path).replace('\\', '/')
+
+
     def _doc_id(self, file_name: Path)-> str:
+        
         stats = file_name.stat()
-        hash_str = f"{file_name.name}_{stats.st_size}_{stats.st_mtime}"
-        return hashlib.md5(hash_str.encode()).hexdigest() 
-    
+        normalized_path = self._normalize_path(file_name)
+        
+        hash_str = f"{normalized_path}_{stats.st_size}_{stats.st_mtime}"
+        
+        doc_id = hashlib.md5(hash_str.encode()).hexdigest() 
+
+        logger.debug(f"Generated doc_id {doc_id} for {normalized_path}")
+        
+        return doc_id
+
+
     def _is_document_ingested(self, doc_id: str) -> bool:
         results = self.client.count(
             collection_name=self.collection_name,
             count_filter=models.Filter(
                 must=[models.FieldCondition(key="metadata.doc_id", 
-                                match=models.MatchValue(value=doc_id)), models.FieldCondition(key="metadata.doc_id")]
+                                match=models.MatchValue(value=doc_id))]
             )
         )
         return results.count > 0
@@ -90,11 +105,11 @@ class VectorRepository:
         md_header_splits: List[Document]  = []
         
         for doc in docs:
-            logger.debug(f"DOCUMNET PROCESSING BEGINS {doc.metadata.get('source')}, page {doc.metadata.get('page')}\n")
+            logger.debug(f"Document processing begins {doc.metadata.get('source')}, page {doc.metadata.get('page')}\n")
 
             doc.metadata = {
                 "doc_id" : doc_id,
-                "source" : str(file_name),
+                "source" : self._normalize_path(file_name),
                 "ingestion_timestamp" : datetime.now().isoformat(),
                 "creationdate" : doc.metadata.get("creationdate"), 
                 "total_pages" : doc.metadata.get("total_pages"), 
@@ -117,20 +132,19 @@ class VectorRepository:
         return self.text_splitter.split_documents(md_header_splits)
 
 
-    def startup_db(self) -> VectorRepository:
+    def startup_db(self) -> Self:
         
         BATCH_SIZE = int(os.getenv("BATCH_SIZE", 100))
         
         directory: Path = Path(__file__).resolve().parent / "pdf_docs" 
-        
-        files_map = directory.rglob("*.pdf")
 
-        files_dirs: List = []
-        for f in files_map:
-            files_dirs.append(f)
+        files_dirs: List = list(directory.rglob("*.pdf"))
+        
+        logger.debug(f"Found {len(files_dirs)} PDF files in {directory}")
 
         if len(files_dirs) == 0:
-            logger.warning(f"{directory} doesn't contain any pdf files") 
+            logger.warning(f"{directory} doesn't contain any pdf files")
+            return self
 
         for file_name in files_dirs:
             
@@ -144,13 +158,15 @@ class VectorRepository:
         
         logger.info(f"Files {files_dirs} was successfully loaded")
         return self
-    
+
+
     def get_retriever(self)-> VectorStoreRetriever:
         
         logger.info(f"Retriever for {self.collection_name} has been created")
         
-        return self.vector_store.as_retriever(search_type='similarity', search_kwargs={"k" : 5},)
-    
+        return self.vector_store.as_retriever(search_type='similarity', search_kwargs={"k" : 3},)
+
+
     def __close(self):
         
         if hasattr(self, 'client') and self.client:

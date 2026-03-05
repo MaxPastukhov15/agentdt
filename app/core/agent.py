@@ -1,12 +1,11 @@
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage, RemoveMessage
+from langchain_core.messages import ToolMessage, SystemMessage, HumanMessage, AIMessage, RemoveMessage, BaseMessage
 from core.state import AgentState
 from langchain_openai import ChatOpenAI
 from core.prompts import SYSTEM_PROMPT
-from langgraph.prebuilt.tool_node import ToolNode
 from langgraph.checkpoint.memory import InMemorySaver
-from core.tools import TOOLS
+from core.tools import TOOLS, tools_by_name
 import os
 import re
 
@@ -16,14 +15,13 @@ class Agent:
 
     def __init__(self) -> None:
         self.llm = ChatOpenAI(api_key=os.getenv("OPENROUTER_API_KEY"), base_url="https://openrouter.ai/api/v1", 
-                 model="arcee-ai/trinity-large-preview:free", temperature=0.1, )
-        self.__tool_node = ToolNode(tools=TOOLS)
+                 model="stepfun/step-3.5-flash:free", temperature=0.1, ).bind_tools(TOOLS)
         self.checkpointer = InMemorySaver()
 
     def __user_input_node(self, state : AgentState)-> dict:
 
         messages = state.messages
-        last_msg = messages[-1]
+        last_msg: BaseMessage = messages[-1]
     
         if isinstance(last_msg, HumanMessage) and last_msg.content.strip("~@)(><,&'*/!.\\|$;:-_^%#№ ") != "":
             user_input = re.sub(pattern=r"[^А-Яа-яA-Za-z0-9!?.,;:()\ '-_]", repl='', string=last_msg.content).strip()
@@ -45,43 +43,54 @@ class Agent:
             print("No input provided")
             return {"messages" : [SystemMessage("No input")]}
 
-
-
-    def __llm_node(self, state : AgentState) -> dict:
+    async def __llm_node(self, state : AgentState) -> dict:
         messages = list(state.messages)  
 
-        response = self.llm.invoke(messages)
+        response = await self.llm.ainvoke(messages)
+        if response.tool_calls:
+            print(f"🔧 Tool calls: {response.tool_calls}\n")
+        else:
+            print(f"🤖 ИИ: {response.content}\n")
 
-        print(f"ИИ: {response.content}\n")
-
-        return {"messages" : [AIMessage(response.content)]}
+        return {"messages" : [response]}
 
     def __should_continue(self, state : AgentState) -> str:
 
         last_msg = state.messages[-1]
 
-        if isinstance(last_msg, AIMessage) or isinstance(last_msg, ToolMessage) or last_msg.content == "No input":
+        if isinstance(last_msg, AIMessage) and last_msg.tool_calls:
+            return "continue"
+        else:
             return "end"
     
-        else:
-            return "continue" 
-    
+    async def __tool_node(self, state: AgentState) -> dict:
+        result, citations = [], []
+        for tool_call in state.messages[-1].tool_calls:
+            tool = tools_by_name[tool_call["name"]]
+            observation = await tool.ainvoke(tool_call["args"])
+            result.append(ToolMessage(content=observation['context'], 
+                                      tool_call_id=tool_call['id']))
+            citations.append(observation['citations'])
+        return {"messages" : result, "citations" : citations}
+
     def make(self):
         graph  = StateGraph(AgentState)
 
         graph.add_node("user_input_node", self.__user_input_node)
         graph.add_node("llm_node", self.__llm_node)
         graph.add_node("tool_node", self.__tool_node)
-        
-        graph.add_conditional_edges("tool_node", self.__should_continue, {
-            "end" : END,
-            "continue" : "llm_node",
-            
-        })
 
         graph.add_edge(START, "user_input_node")
         graph.add_edge("user_input_node", "llm_node")
-        graph.add_edge("llm_node", "tool_node")
+        
+        graph.add_conditional_edges("llm_node", self.__should_continue, {
+            "end" : END,
+            "continue" : "tool_node",
+            
+        })
+
+        graph.add_edge("tool_node", "llm_node")
+
 
         app = graph.compile(checkpointer=self.checkpointer)
         return app

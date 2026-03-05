@@ -1,30 +1,33 @@
-#from core.agent import Agent
-#from langchain_core.messages import HumanMessage
-from db.vectordb import VectorRepository
-import time
+from core.agent import Agent
+from langchain_core.messages import HumanMessage
+from asyncio import run
+import phoenix as px
+from openinference.instrumentation.langchain import LangChainInstrumentor
+from phoenix.otel import register
+import os
+import asyncio
+from dotenv import load_dotenv
 
-'''
-graph = Agent().make()
+load_dotenv()
+async def main():
+    session = px.launch_app()
 
-while True:
-    query = input()
+    try:
+        tracer_provider = register(endpoint=os.getenv('PHOENIX_COLLECTOR_ENDPOINT'))
+        LangChainInstrumentor().instrument(tracer_provider=tracer_provider)
 
-    answer = graph.invoke({"messages" : [HumanMessage(query)], "citation_links" : None}, config={"configurable": {"thread_id": "haha12020"}})
-'''
+        graph = Agent().make()
 
-start = time.perf_counter()
-with VectorRepository(location_to_save="./db/tmp/chemistry_collection", 
-                                 collection_name="chemistry_collection") as repo:
-    results = repo.get_retriever().invoke("Что такое атом?")
-end = time.perf_counter()
+        while True:
+            query = await asyncio.to_thread(input, "Вопрос: ")
 
-print(f"{results[0]}\n execution time (sec): {(end - start):.4f}")
+            if not query.strip():
+                break
 
-'''
-start = time.perf_counter()
-startdb = VectorRepository(location_to_save="./db/tmp/chemistry_collection", 
-                                 collection_name="chemistry_collection").startup_db()
-end = time.perf_counter()
+            answer = await graph.ainvoke({"messages" : [HumanMessage(query)], "citation_links" : None}, 
+                          config={"configurable": {"thread_id": "haha12020"}})
+    finally:
+        session.end()
 
-print(f"\nexecution time (sec): {(end - start):.4f}")
-'''
+if __name__ == "__main__":
+    run(main())

@@ -12,13 +12,13 @@ LOGGING = {
 
     },
     "handlers" : {
-        "stdout" : {
-            "class" : "logging.StreamHandler",
-            "stream" : "ext://sys.stdout",
-            "formatter" : "json",
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": "logs/app.log",  # Файл создастся в корне проекта
+            "formatter": "json",
         }
     },
-    "loggers": {"" : {"handlers" : ["stdout"], "level" : "DEBUG"}},
+    "loggers": {"" : {"handlers" : ["file"], "level" : "DEBUG"}},
 
 }
 
