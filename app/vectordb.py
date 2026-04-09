@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Self
 
+from config.config import settings
 from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStoreRetriever
@@ -28,7 +29,8 @@ class VectorRepository:
         self.client = QdrantClient(path=location_to_save)
 
         self.embeddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(
-            model_name="BAAI/bge-m3", encode_kwargs={"normalize_embeddings": True}
+            model_name=settings.embedding_model,
+            encode_kwargs={"normalize_embeddings": True},
         )
 
         self.collection_name = collection_name
@@ -152,7 +154,7 @@ class VectorRepository:
     def startup_db(self) -> Self:
         BATCH_SIZE = int(os.getenv("BATCH_SIZE", 100))
 
-        directory: Path = Path(__file__).resolve().parent / "pdf_docs"
+        directory: Path = Path(__file__).resolve().parent.parent / "pdf_docs"
 
         files_dirs: List = list(directory.rglob("*.pdf"))
 
