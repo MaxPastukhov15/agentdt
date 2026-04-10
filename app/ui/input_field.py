@@ -9,9 +9,7 @@ class ChatInput(ft.Container):
         self.on_send = on_send
         self.padding = ft.padding.symmetric(horizontal=20, vertical=5)
         self.alignment = ft.Alignment.BOTTOM_RIGHT
-        self.shadow = ft.BoxShadow(
-            blur_radius=50, color=ft.Colors.SURFACE, offset=ft.Offset(0, -5)
-        )
+        self.shadow = ft.BoxShadow(blur_radius=50, color=ft.Colors.SURFACE, offset=ft.Offset(0, -5))
 
         self.text_field = ft.TextField(
             bgcolor=ft.Colors.WHITE,

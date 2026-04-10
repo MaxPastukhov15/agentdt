@@ -90,9 +90,7 @@ def invoke_agent(agent_graph, test_session_id):
 @pytest.fixture(scope="session")
 def chemistry_golden_dataset():
     """Загружает химический датасет"""
-    dataset_path = os.path.join(
-        os.path.dirname(__file__), "datasets", "chemistry_questions.csv"
-    )
+    dataset_path = os.path.join(os.path.dirname(__file__), "datasets", "chemistry_questions.csv")
     if os.path.exists(dataset_path):
         return pd.read_csv(dataset_path)
     return pd.DataFrame()

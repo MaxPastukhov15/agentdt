@@ -7,9 +7,7 @@ from ui.sidebar import SidebarView
 
 
 class MainPresenter:
-    def __init__(
-        self, page: ft.Page, model_core: Agent | AppModel, chat_manager: ChatManager
-    ):
+    def __init__(self, page: ft.Page, model_core: Agent | AppModel, chat_manager: ChatManager):
         self.page = page
         self.model_core = model_core
         self.chat_manager = chat_manager
@@ -18,9 +16,7 @@ class MainPresenter:
 
         self.sidebar = SidebarView(
             on_new_chat=self.create_new_chat,
-            on_chat_selected=lambda tid: self.page.run_task(
-                self.chat_ptr.load_chat, tid
-            ),
+            on_chat_selected=lambda tid: self.page.run_task(self.chat_ptr.load_chat, tid),
             on_delete_chat=self.delete_chat,
             on_rename_chat=self.rename_chat,
         )

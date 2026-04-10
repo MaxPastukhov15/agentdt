@@ -96,9 +96,7 @@ async def test_delete_chat_calls_checkpointer(chat_manager):
 
     # 3. Проверка: убеждаемся, что метод adelete_thread у checkpointer был вызван
     # именно с этим thread_id
-    chat_manager.checkpointer.adelete_thread.assert_called_once_with(
-        thread_id=thread_id
-    )
+    chat_manager.checkpointer.adelete_thread.assert_called_once_with(thread_id=thread_id)
 
 
 @pytest.mark.asyncio

@@ -42,11 +42,7 @@ def create_summarizer() -> RunnableSerializable:
         ]
     )
 
-    return (
-        prompt
-        | llm_summarizer.with_retry(wait_exponential_jitter=True, stop_after_attempt=3)
-        | StrOutputParser()
-    )
+    return prompt | llm_summarizer.with_retry(wait_exponential_jitter=True, stop_after_attempt=3) | StrOutputParser()
 
 
 chain = create_summarizer()
@@ -57,9 +53,7 @@ async def create_summary(query: str, content: Document) -> tuple[str, str] | str
 
     try:
         async with LIMIT:
-            summary = await chain.ainvoke(
-                {"context": content.page_content[:300000], "query": query}
-            )
+            summary = await chain.ainvoke({"context": content.page_content[:300000], "query": query})
 
         title = content.metadata.get("title", "N/A")
         author = content.metadata.get("authors", "N/A")
@@ -110,9 +104,7 @@ async def search_chemistry_collection(query: str) -> dict[str, Any]:
     WARNINGS:
     - Если результатов 0, сообщите пользователю, что информация не найдена.
     """
-    with VectorRepository(
-        "./db/collections/chemistry_collection", collection_name="chemistry_collection"
-    ) as repo:
+    with VectorRepository("./db/collections/chemistry_collection", collection_name="chemistry_collection") as repo:
         results = await repo.get_retriever().ainvoke(query)
 
         formatted_results = [
@@ -172,9 +164,7 @@ async def search_arxiv(query: str) -> dict[str, Any]:
         context = "\n\n".join([res[1] for res in results])
         citations = [res[0] for res in results]
 
-        logger.info(
-            f"Used for context: {context}\n\n {'\n'.join(citations)}"[:50] + "..."
-        )
+        logger.info(f"Used for context: {context}\n\n {'\n'.join(citations)}"[:50] + "...")
         return {"context": context, "citations": citations}
 
     except Exception as e:

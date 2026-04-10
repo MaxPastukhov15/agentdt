@@ -13,7 +13,8 @@ class ChatManager:
         Parameters
         ----------
         path : str, optional
-            Path to the SQLite database file (default is 'C:/chat_history/agent_history.db')
+            Path to the SQLite database file
+            (default is 'C:/chat_history/agent_history.db')
         """
         self.db_path = path
         self.db_dir = os.path.dirname(self.db_path)
@@ -113,7 +114,8 @@ class ChatManager:
         Returns
         -------
         list
-            A list of dictionaries containing chat metadata (thread_id, title, updated_at),
+            A list of dictionaries containing chat metadata
+            (thread_id, title, updated_at),
             ordered by the most recently updated
         """
         self.__connection.row_factory = aiosqlite.Row

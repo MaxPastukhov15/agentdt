@@ -19,9 +19,7 @@ class ChatPresenter:
         self.view = ft.Stack(
             controls=[
                 ft.Container(content=self.history_view, expand=True),
-                ft.Container(
-                    bgcolor=ft.Colors.SURFACE, height=100, bottom=0, left=0, right=0
-                ),
+                ft.Container(bgcolor=ft.Colors.SURFACE, height=100, bottom=0, left=0, right=0),
                 ft.Container(content=self.input_view, bottom=0, left=0, right=0),
             ],
             expand=True,
@@ -39,9 +37,7 @@ class ChatPresenter:
             config = {"configurable": {"thread_id": self.current_thread_id}}
             last_links = []
 
-            async for (
-                chunk
-            ) in self.model.app.astream(  # Используем скомпилированный app
+            async for chunk in self.model.app.astream(  # Используем скомпилированный app
                 {"messages": [HumanMessage(content=text)]},
                 config=config,
                 stream_mode="values",

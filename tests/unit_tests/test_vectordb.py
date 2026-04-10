@@ -44,13 +44,9 @@ class TestVectorRepository:
             yield mock_instance
 
     @pytest.fixture
-    def repository(
-        self, temp_db_path, mock_qdrant_client, mock_embeddings, mock_vector_store
-    ):
+    def repository(self, temp_db_path, mock_qdrant_client, mock_embeddings, mock_vector_store):
         """Create a VectorRepository instance with mocks"""
-        repo = VectorRepository(
-            location_to_save=temp_db_path, collection_name="test_collection"
-        )
+        repo = VectorRepository(location_to_save=temp_db_path, collection_name="test_collection")
         # Replace the client with our mock
         repo.client = mock_qdrant_client
         repo.vector_store = mock_vector_store
@@ -226,9 +222,7 @@ class TestVectorRepository:
 
         # Assert
         assert result == mock_retriever
-        mock_vector_store.as_retriever.assert_called_once_with(
-            search_type="similarity", search_kwargs={"k": 5}
-        )
+        mock_vector_store.as_retriever.assert_called_once_with(search_type="similarity", search_kwargs={"k": 5})
 
     def test_close_method(self, repository, mock_qdrant_client):
         """Test close method"""
@@ -263,9 +257,7 @@ class TestVectorRepositoryIntegration:
         test_pdf.write_text("%PDF-1.4\n%PDF content would go here")
 
         # Test startup
-        with VectorRepository(
-            location_to_save=temp_db_path, collection_name="test_collection"
-        ) as repo:
+        with VectorRepository(location_to_save=temp_db_path, collection_name="test_collection") as repo:
             result = repo.startup_db()
 
             # Get retriever

@@ -88,9 +88,7 @@ class SidebarView(ft.Container):
                         no_wrap=True,
                     ),
                     subtitle=ft.Text(chat["updated_at"], size=9),
-                    on_click=lambda e, tid=chat["thread_id"]: self.on_chat_selected(
-                        tid
-                    ),
+                    on_click=lambda e, tid=chat["thread_id"]: self.on_chat_selected(tid),
                     trailing=controls_row,
                     toggle_inputs=True,
                     dense=True,
@@ -110,9 +108,7 @@ class SidebarView(ft.Container):
         thread_id = e.control.data["thread_id"]
         current_title = e.control.data["title"]
 
-        name_input = ft.TextField(
-            label="Новое название", value=current_title, autofocus=True
-        )
+        name_input = ft.TextField(label="Новое название", value=current_title, autofocus=True)
 
         async def save_clicked(e_save):
             if name_input.value:

@@ -16,15 +16,11 @@ class ChatMessage(ft.Column):
                 bgcolor=ft.Colors.RED_50 if is_user else ft.Colors.SURFACE_BRIGHT,
                 border_radius=15,
                 padding=10,
-                alignment=ft.Alignment.CENTER_RIGHT
-                if is_user
-                else ft.Alignment.CENTER_LEFT,
+                alignment=ft.Alignment.CENTER_RIGHT if is_user else ft.Alignment.CENTER_LEFT,
             )
         ]
 
-        self.horizontal_alignment = (
-            ft.CrossAxisAlignment.END if is_user else ft.CrossAxisAlignment.START
-        )
+        self.horizontal_alignment = ft.CrossAxisAlignment.END if is_user else ft.CrossAxisAlignment.START
 
         # if links:
         #    self.update_links(links)
@@ -40,9 +36,7 @@ class ChatMessage(ft.Column):
         ]
 
         for link in links:
-            self.links_column.controls.append(
-                ft.Text(f"🔗 {link}", size=11, color=ft.Colors.BLUE_300, italic=True)
-            )
+            self.links_column.controls.append(ft.Text(f"🔗 {link}", size=11, color=ft.Colors.BLUE_300, italic=True))
         self.links_column.visible = True
         self.update()
 

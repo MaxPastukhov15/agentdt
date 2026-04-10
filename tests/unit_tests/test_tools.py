@@ -40,9 +40,7 @@ def mock_vector_repo():
 
 
 @pytest.mark.asyncio
-async def test_search_chemistry_collection_success(
-    mock_vector_repo, mock_chain_ainvoke
-):
+async def test_search_chemistry_collection_success(mock_vector_repo, mock_chain_ainvoke):
     """Успешный поиск: проверяем форматирование контекста и цитат"""
     mock_instance, mock_retriever = mock_vector_repo
 

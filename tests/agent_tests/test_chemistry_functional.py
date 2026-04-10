@@ -35,6 +35,4 @@ class TestChemistryBasics:
 
         # Ожидаем числовой ответ или формулу
         assert any(char.isdigit() for char in answer), "Расчёт должен содержать числа"
-        assert "pH" in answer or "водород" in answer.lower(), (
-            "Ответ должен относиться к pH"
-        )
+        assert "pH" in answer or "водород" in answer.lower(), "Ответ должен относиться к pH"

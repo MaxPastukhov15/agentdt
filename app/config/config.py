@@ -3,9 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        case_sensitive=False, env_file_encoding="utf-8", env_file=".env"
-    )
+    model_config = SettingsConfigDict(case_sensitive=False, env_file_encoding="utf-8", env_file=".env")
 
     openrouter_api_key: SecretStr = SecretStr("sk-or-v1-...")
     phoenix_collector_endpoint: str = "http://localhost:6006/v1/traces"

@@ -31,10 +31,7 @@ class Agent:
         messages = state.messages
         last_msg: BaseMessage = messages[-1]
 
-        if (
-            isinstance(last_msg, HumanMessage)
-            and last_msg.content.strip("~@)(><,&'*/!.\\|$;:-_^%#№ ") != ""
-        ):
+        if isinstance(last_msg, HumanMessage) and last_msg.content.strip("~@)(><,&'*/!.\\|$;:-_^%#№ ") != "":
             user_input = re.sub(
                 pattern=r"[^А-Яа-яA-Za-z0-9!?.,;:()\ '-_]",
                 repl="",
@@ -89,11 +86,7 @@ class Agent:
         for tool_call in state.messages[-1].tool_calls:
             tool = tools_by_name[tool_call["name"]]
             observation = await tool.ainvoke(tool_call["args"])
-            result.append(
-                ToolMessage(
-                    content=observation["context"], tool_call_id=tool_call["id"]
-                )
-            )
+            result.append(ToolMessage(content=observation["context"], tool_call_id=tool_call["id"]))
             if isinstance(observation["citations"], list):
                 citations.extend(observation["citations"])
             else:

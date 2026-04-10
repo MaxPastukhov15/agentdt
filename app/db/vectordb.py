@@ -27,16 +27,12 @@ class VectorRepository:
     def __init__(self, location_to_save: str, collection_name: str) -> None:
         self.client = QdrantClient(path=location_to_save)
 
-        self.embeddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(
-            model_name="BAAI/bge-m3", encode_kwargs={"normalize_embeddings": True}
-        )
+        self.embeddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3", encode_kwargs={"normalize_embeddings": True})
 
         self.collection_name = collection_name
 
         if not self.client.collection_exists(self.collection_name):
-            logger.debug(
-                f"creating new collection {self.collection_name} in direcotry {location_to_save}"
-            )
+            logger.debug(f"creating new collection {self.collection_name} in direcotry {location_to_save}")
 
             self.client.create_collection(
                 collection_name=collection_name,
@@ -49,18 +45,14 @@ class VectorRepository:
             client=self.client,
         )
 
-        self.text_splitter: RecursiveCharacterTextSplitter = (
-            RecursiveCharacterTextSplitter(
-                chunk_size=1024,
-                chunk_overlap=204,
-                length_function=len,
-                is_separator_regex=False,
-            )
+        self.text_splitter: RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter(
+            chunk_size=1024,
+            chunk_overlap=204,
+            length_function=len,
+            is_separator_regex=False,
         )
 
-        self.markdown_splitter = MarkdownHeaderTextSplitter(
-            headers_to_split_on=[("#", "Header 1"), ("##", "Header 2")]
-        )
+        self.markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[("#", "Header 1"), ("##", "Header 2")])
 
     def __enter__(self) -> Self:
         logger.info(f"Connection with the {self.client} has been established")
@@ -91,13 +83,7 @@ class VectorRepository:
     def _is_document_ingested(self, doc_id: str) -> bool:
         results = self.client.count(
             collection_name=self.collection_name,
-            count_filter=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="metadata.doc_id", match=models.MatchValue(value=doc_id)
-                    )
-                ]
-            ),
+            count_filter=models.Filter(must=[models.FieldCondition(key="metadata.doc_id", match=models.MatchValue(value=doc_id))]),
         )
         return results.count > 0
 
@@ -122,9 +108,7 @@ class VectorRepository:
         md_header_splits: List[Document] = []
 
         for doc in docs:
-            logger.debug(
-                f"Document processing begins {doc.metadata.get('source')}, page {doc.metadata.get('page')}\n"
-            )
+            logger.debug(f"Document processing begins {doc.metadata.get('source')}, page {doc.metadata.get('page')}\n")
 
             doc.metadata = {
                 "doc_id": doc_id,

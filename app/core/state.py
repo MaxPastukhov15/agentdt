@@ -14,6 +14,4 @@ def add_links(left: Sequence[str], right: Sequence[str]) -> Sequence[str]:
 
 class AgentState(BaseModel):
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    citation_links: Optional[Annotated[Sequence[str], add_links]] = Field(
-        default_factory=list
-    )
+    citation_links: Optional[Annotated[Sequence[str], add_links]] = Field(default_factory=list)
