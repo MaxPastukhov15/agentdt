@@ -1,11 +1,14 @@
+import asyncio
 import hashlib
 import logging
 import os
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import List, Self
 
-from dotenv import load_dotenv
+from config.config import settings
+from db.embedding_factory import EmbeddingModel
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -17,25 +20,30 @@ from langchain_text_splitters import (
 )
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, VectorParams
+from tqdm import tqdm
+from utils.text_cleaner import clean_text
 
-logger = logging.getLogger("db")
+db_logger = logging.getLogger("db")
 
-load_dotenv()
+
+def _normalize_path(file_path: Path) -> str:
+    return str(file_path.absolute()).replace("\\", "/")
 
 
 class VectorRepository:
-    def __init__(self, location_to_save: str, collection_name: str) -> None:
-        self.client = QdrantClient(path=location_to_save)
-
-        self.embeddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3", encode_kwargs={"normalize_embeddings": True})
-
+    def __init__(self, collection_name: str) -> None:
+        self.location = str(settings.db_path)
+        self.client = QdrantClient(path=self.location)
         self.collection_name = collection_name
 
+        self.embeddings: HuggingFaceEmbeddings = EmbeddingModel.get_model()
+
         if not self.client.collection_exists(self.collection_name):
-            logger.debug(f"creating new collection {self.collection_name} in direcotry {location_to_save}")
+            db_logger.debug(f"""creating new collection 
+                {self.collection_name} in direcotry {self.location}""")
 
             self.client.create_collection(
-                collection_name=collection_name,
+                collection_name=self.collection_name,
                 vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
             )
 
@@ -54,29 +62,64 @@ class VectorRepository:
 
         self.markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[("#", "Header 1"), ("##", "Header 2")])
 
+    @staticmethod
+    def _process_file_worker(task_data):
+        file_path, doc_id, _ = task_data
+
+        loader = PyMuPDF4LLMLoader(file_path=file_path, mode="page", ignore_graphics=True, ignore_images=True, table_strategy=None)
+        md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[("#", "Header 1"), ("##", "Header 2")])
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1024,
+            chunk_overlap=204,
+            length_function=len,
+            is_separator_regex=False,
+        )
+
+        docs = loader.load()
+        md_header_splits: List[Document] = []
+
+        for doc in tqdm(docs):
+            db_logger.debug(f"""Document processing begins 
+                    {doc.metadata.get("source")}, 
+                    page {doc.metadata.get("page")}\n""")
+
+            doc.metadata = {
+                "doc_id": doc_id,
+                "source": _normalize_path(file_path),
+                "ingestion_timestamp": datetime.now().isoformat(),
+                "creationdate": doc.metadata.get("creationdate"),
+                "total_pages": doc.metadata.get("total_pages"),
+                "format": doc.metadata.get("format"),
+                "page": doc.metadata.get("page"),
+            }
+
+            cleaned = clean_text(doc.page_content, mode="data")
+
+            splits = md_splitter.split_text(cleaned)
+            for s in splits:
+                s.metadata.update({"doc_id": doc_id, "source": str(file_path).replace("\\", "/"), "page": doc.metadata.get("page")})
+                md_header_splits.append(s)
+
+        return text_splitter.split_documents(md_header_splits)
+
     def __enter__(self) -> Self:
-        logger.info(f"Connection with the {self.client} has been established")
+        db_logger.info(f"Connection with the {self.client} has been established")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         if exc_type:
-            logger.error(f"Client {self.client} is closed incorrectly")
+            db_logger.error(f"Client {self.client} is closed incorrectly")
         self.__close()
-
-    def _normalize_path(self, file_path: Path) -> str:
-        abs_path = file_path.absolute()
-
-        return str(abs_path).replace("\\", "/")
 
     def _doc_id(self, file_name: Path) -> str:
         stats = file_name.stat()
-        normalized_path = self._normalize_path(file_name)
+        normalized_path = _normalize_path(file_name)
 
         hash_str = f"{normalized_path}_{stats.st_size}_{stats.st_mtime}"
 
         doc_id = hashlib.md5(hash_str.encode()).hexdigest()
 
-        logger.debug(f"Generated doc_id {doc_id} for {normalized_path}")
+        db_logger.debug(f"Generated doc_id {doc_id} for {normalized_path}")
 
         return doc_id
 
@@ -92,7 +135,7 @@ class VectorRepository:
         count = 0
 
         if self._is_document_ingested(doc_id):
-            logger.debug(f"the {file_name} has already been ingested")
+            db_logger.debug(f"the {file_name} has already been ingested")
             return []
 
         loader = PyMuPDF4LLMLoader(
@@ -107,59 +150,89 @@ class VectorRepository:
 
         md_header_splits: List[Document] = []
 
-        for doc in docs:
-            logger.debug(f"Document processing begins {doc.metadata.get('source')}, page {doc.metadata.get('page')}\n")
+        for doc in tqdm(docs):
+            db_logger.debug(f"""Document processing begins 
+                    {doc.metadata.get("source")}, 
+                    page {doc.metadata.get("page")}\n""")
 
             doc.metadata = {
                 "doc_id": doc_id,
-                "source": self._normalize_path(file_name),
+                "source": _normalize_path(file_name),
                 "ingestion_timestamp": datetime.now().isoformat(),
                 "creationdate": doc.metadata.get("creationdate"),
                 "total_pages": doc.metadata.get("total_pages"),
                 "format": doc.metadata.get("format"),
                 "page": doc.metadata.get("page"),
             }
+            cleaned_text = clean_text(doc.page_content, mode="data")
 
-            header_split = self.markdown_splitter.split_text(doc.page_content)
+            header_split = self.markdown_splitter.split_text(cleaned_text)
 
             for split in header_split:
                 split.metadata.update(doc.metadata)
                 count += 1
 
                 if count % 10 == 0:
-                    logger.debug(f"\n{split.metadata}\n")
+                    db_logger.debug(f"\n{split.metadata}\n")
 
                 md_header_splits.append(split)
 
         return self.text_splitter.split_documents(md_header_splits)
 
     def startup_db(self) -> Self:
-        BATCH_SIZE = int(os.getenv("BATCH_SIZE", 100))
+        BATCH_SIZE = 100
 
-        directory: Path = Path(__file__).resolve().parent / "pdf_docs"
+        directory: Path = settings.pdf_docs_path
 
         files_dirs: List = list(directory.rglob("*.pdf"))
 
-        logger.debug(f"Found {len(files_dirs)} PDF files in {directory}")
+        db_logger.debug(f"Found {len(files_dirs)} PDF files in {directory}")
 
-        if len(files_dirs) == 0:
-            logger.warning(f"{directory} doesn't contain any pdf files")
+        tasks = []
+
+        for file_path in files_dirs:
+            doc_id = self._doc_id(file_path)
+            if not self._is_document_ingested(doc_id):
+                tasks.append((file_path, doc_id, {}))
+            else:
+                db_logger.debug(f"the {file_path} has already been ingested")
+
+        if not tasks:
+            db_logger.warning("All files have already been indexed.")
             return self
 
-        for file_name in files_dirs:
-            all_chunks = self._load_pdf(file_name=file_name)
+        num_files = len(tasks)
 
+        if num_files == 1:
+            max_workers = 1
+        elif num_files == 2:
+            max_workers = 2
+        else:
+            max_workers = min(os.cpu_count() or 1, 3)
+
+        db_logger.info(f"Start of indexing {num_files} files on {max_workers} kernels of cpu")
+
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(VectorRepository._process_file_worker, tasks))
+
+        for all_chunks in results:
             if all_chunks:
                 for i in range(0, len(all_chunks), BATCH_SIZE):
-                    self.vector_store.add_documents(all_chunks[i : i + BATCH_SIZE])
+                    batch = all_chunks[i : i + BATCH_SIZE]
+                    self.vector_store.add_documents(batch)
 
-            logger.debug(f"Document {file_name} was successfully loaded!")
+        db_logger.info(f"Indexing is ended of {num_files} files")
 
-        logger.info(f"Files {files_dirs} was successfully loaded")
         return self
 
+    async def ingest_file(self, file_path: Path):
+        chunks = self._load_pdf(file_path)
+        if chunks:
+            await asyncio.to_thread(self.vector_store.add_documents, chunks)
+        return len(chunks)
+
     def get_retriever(self) -> VectorStoreRetriever:
-        logger.info(f"Retriever for {self.collection_name} has been created")
+        db_logger.info(f"Retriever for {self.collection_name} has been created")
 
         return self.vector_store.as_retriever(
             search_type="similarity",
@@ -168,8 +241,8 @@ class VectorRepository:
 
     def __close(self):
         if hasattr(self, "client") and self.client:
-            logger.info(f"Connection with {self.client} is closed")
+            db_logger.info(f"Connection with {self.client} is closed")
             self.client.close()
 
         else:
-            logger.error("Client doesn't exists")
+            db_logger.error("Client doesn't exists")

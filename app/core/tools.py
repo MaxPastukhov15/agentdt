@@ -2,47 +2,26 @@ import asyncio
 import logging
 from typing import Any
 
-from config.config import settings
+from db.vectordb import VectorRepository
 from langchain.tools import tool
+from langchain_community.document_loaders.async_html import AsyncHtmlLoader
+from langchain_community.document_transformers import BeautifulSoupTransformer
 from langchain_community.retrievers import ArxivRetriever
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 from langchain_core.documents import Document
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableSerializable
-from langchain_openai import ChatOpenAI
-from vectordb import VectorRepository
+from utils.summarization_chain import create_summarizer
+from utils.text_cleaner import clean_text
 
-logger = logging.getLogger("tools")
+tools_logger = logging.getLogger("tools")
 
 LIMIT = asyncio.Semaphore(2)
+_REPOS = {}
 
 
-def create_summarizer() -> RunnableSerializable:
-    llm_summarizer = ChatOpenAI(
-        api_key=settings.openrouter_api_key,
-        base_url="https://openrouter.ai/api/v1",
-        model=settings.summarization_model,
-        temperature=0.0,
-        max_completion_tokens=2000,
-    )
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                """Действуй как аналитик. Подготовь сжатый отчет (summary) на основе предоставленного контекста.
-        Этот отчет будет использован другой нейросетью, поэтому пиши максимально информативно, без вводных фраз. 
-        Особо концентрируй внимание на выводах в статье, если это информация из интернета со ссылкой просто отыщи ответ на вопрос""",
-            ),
-            (
-                "human",
-                "Контекст: {context}\n\nЗадача: {query}\n\nФормат: тезис, bullet points, вывод (100-200 слов).",
-            ),
-        ]
-    )
-
-    return prompt | llm_summarizer.with_retry(wait_exponential_jitter=True, stop_after_attempt=3) | StrOutputParser()
+def get_repo(collection_name: str):
+    if collection_name not in _REPOS:
+        _REPOS[collection_name] = VectorRepository(collection_name)
+    return _REPOS[collection_name]
 
 
 chain = create_summarizer()
@@ -62,20 +41,20 @@ async def create_summary(query: str, content: Document) -> tuple[str, str] | str
         if author != "N/A" and link != "N/A":
             return (
                 f"{title}, {author}, {link}",
-                f"Title: {title}\nAuthor: {author}\nLink: {link}\nSummary:\n{summary}",
+                summary,
             )
         elif author != "N/A":
             return (
                 f"{title}, {author}",
-                f"Title: {title}\nAuthor: {author}\nSummary:\n{summary}",
+                summary,
             )
         elif link != "N/A":
             return (
                 f"{title}, {link}",
-                f"Title: {title}\nLink: {link}\nSummary:\n{summary}",
+                summary,
             )
         else:
-            return (f"{title}", f"Title: {title}\nSummary:\n{summary}")
+            return (f"{title}", summary)
 
     except Exception as e:
         return f"Error processing document: {str(e)}"
@@ -104,21 +83,23 @@ async def search_chemistry_collection(query: str) -> dict[str, Any]:
     WARNINGS:
     - Если результатов 0, сообщите пользователю, что информация не найдена.
     """
-    with VectorRepository("./db/collections/chemistry_collection", collection_name="chemistry_collection") as repo:
-        results = await repo.get_retriever().ainvoke(query)
+    repo = get_repo("chemistry_collection")
+    results = await repo.get_retriever().ainvoke(query)
 
-        formatted_results = [
-            (
-                f"{doc.metadata['source']}, {doc.metadata['page']}",
-                f"({doc.metadata['source']}, {doc.metadata['page']}): {doc.page_content}",
-            )
-            for doc in results
-        ]
+    tools_logger.info(f"Search in collections: found {len(results)} documents for queries '{query}'")
 
-        context = "\n\n".join([res[1] for res in formatted_results])
-        citations = [res[0] for res in formatted_results]
+    formatted_results = [
+        (
+            f"{doc.metadata['source']}, {doc.metadata['page']}",
+            doc.page_content,
+        )
+        for doc in results
+    ]
 
-    logger.info(f"Used for context: {context}\n\n {'\n'.join(citations)}"[:50] + "...")
+    context = "\n\n".join([res[1] for res in formatted_results])
+    citations = [res[0] for res in formatted_results]
+
+    tools_logger.info(f"Used for context: {context[:50]}\n\n {citations}" + "...")
     return {"context": context, "citations": citations}
 
 
@@ -146,7 +127,7 @@ async def search_arxiv(query: str) -> dict[str, Any]:
     - Не цитируйте статью, не проверив её релевантность
     """
 
-    retriever = ArxivRetriever(load_max_docs=3, get_full_documents=True)
+    retriever = ArxivRetriever(load_max_docs=1, get_full_documents=True)
 
     try:
         docs = await asyncio.to_thread(retriever.invoke, query)
@@ -164,7 +145,7 @@ async def search_arxiv(query: str) -> dict[str, Any]:
         context = "\n\n".join([res[1] for res in results])
         citations = [res[0] for res in results]
 
-        logger.info(f"Used for context: {context}\n\n {'\n'.join(citations)}"[:50] + "...")
+        tools_logger.info(f"Used for context: {context[:50]}\n\n {citations}" + "...")
         return {"context": context, "citations": citations}
 
     except Exception as e:
@@ -172,7 +153,7 @@ async def search_arxiv(query: str) -> dict[str, Any]:
 
 
 @tool
-async def search_duckduckgo(query: str) -> dict[str, Any]:
+async def search_duckduckgo(query: str, deep_read: bool = False) -> dict[str, Any]:
     '''"""
     Выполняет веб-поиск с помощью DuckDuckGo для поиска общей информации и ресурсов.
 
@@ -183,6 +164,8 @@ async def search_duckduckgo(query: str) -> dict[str, Any]:
     ARGS:
     - query: Поисковый запрос. Формулируйте его как ключевые слова, а не полный вопрос.
              Например, вместо "Что такое машинное обучение?" используйте "определение машинного обучения".
+    - deep_read: Позволяет либо воспользоваться сниппетами для простых вопросов, либо полностью глубоко изучить
+    источник
 
     RETURNS:
     Словарь, содержащий:
@@ -197,25 +180,43 @@ async def search_duckduckgo(query: str) -> dict[str, Any]:
     - Учитывайте, что веб-источники могут различаться по надежности по сравнению с академическими источниками.
     """'''
     wrapper = DuckDuckGoSearchAPIWrapper()
-    results = wrapper.results(query, max_results=4)
+    results = await asyncio.to_thread(wrapper.results, query, max_results=4)
 
-    documents = [
-        Document(
-            page_content=doc["snippet"],
-            metadata={"title": doc["title"], "source": doc["link"]},
-        )
-        for doc in results
-    ]
+    if not results:
+        return {"context": "Ничего не найдено.", "citations": []}
 
-    tasks = [create_summary(query, doc) for doc in documents]
+    if deep_read:
+        bs_transformer = BeautifulSoupTransformer()
 
-    results = await asyncio.gather(*tasks)
+        url = results[1]["link"]
+        loader = AsyncHtmlLoader([url])
 
-    context = "\n\n".join([res[1] for res in results])
-    citations = [res[0] for res in results]
+        docs = await asyncio.to_thread(loader.load)
 
-    logger.info(f"Used for context: {context}\n\n {'\n'.join(citations)}"[:50] + "...")
-    return {"context": context, "citations": citations}
+        docs_transformed = bs_transformer.transform_documents(docs, tags_to_extract=["p", "li", "article", "h1", "h2"])
+
+        full_text = docs_transformed[0].page_content if docs_transformed else "Не удалось извлечь текст."
+
+        full_text = clean_text(full_text, mode="content")
+
+        tools_logger.info(f"Used for context: {full_text[:50]}\n\n {url}" + "...")
+
+        return {"context": f"Глубокий анализ источника:\n{full_text[:10000]}", "citations": [url]}
+
+    else:
+        documents = [
+            Document(
+                page_content=doc["snippet"],
+                metadata={"title": doc["title"], "source": doc["link"]},
+            )
+            for doc in results
+        ]
+
+        context = "\n\n".join([doc.page_content for doc in documents])
+        citations = [doc.metadata.get("source", "N/A") for doc in documents]
+
+        tools_logger.info(f"Used for context: {context[:50]}\n\n {citations}" + "...")
+        return {"context": context, "citations": citations}
 
 
 TOOLS = [search_chemistry_collection, search_arxiv, search_duckduckgo]

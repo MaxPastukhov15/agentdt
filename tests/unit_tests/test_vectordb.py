@@ -6,9 +6,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from langchain_core.documents import Document
-
 from app.vectordb import VectorRepository
+from langchain_core.documents import Document
 
 
 class TestVectorRepository:

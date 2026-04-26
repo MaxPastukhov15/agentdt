@@ -2,8 +2,8 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.3.4
     hooks:
-      # Запуск линтера (проверка ошибок и автоисправление того, что можно)
+
       - id: ruff
         args: [ --fix ]
-      # Запуск форматирования (чтобы код был красивым)
+
       - id: ruff-format

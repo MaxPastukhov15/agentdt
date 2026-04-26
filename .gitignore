@@ -9,7 +9,6 @@
 ehthumbs.db
 Thumbs.db
 
-venv/
 # ===========================
 # ФАЙЛЫ ОКРУЖЕНИЯ И СЕКРЕТЫ
 # ===========================
@@ -21,6 +20,7 @@ venv/
 secrets/
 credentials/
 config/secrets.yml
+venv/
 
 # ===========================
 # ЗАВИСИМОСТИ
@@ -134,3 +134,5 @@ uploads/*
 # Игнорировать все .log, кроме important.log
 *.log
 !important.log
+
+models/

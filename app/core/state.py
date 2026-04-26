@@ -1,17 +1,10 @@
-from typing import Annotated, Optional, Sequence
+from typing import Annotated, List, Sequence
 
 from langgraph.graph.message import BaseMessage, add_messages
-from pydantic import BaseModel, Field
-
-
-def add_links(left: Sequence[str], right: Sequence[str]) -> Sequence[str]:
-    if not left:
-        left = []
-    if not right:
-        right = []
-    return list(left) + list(right)
+from pydantic import BaseModel
 
 
 class AgentState(BaseModel):
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    citation_links: Optional[Annotated[Sequence[str], add_links]] = Field(default_factory=list)
+    citation_links: List[str] = []
+    step_count: int = 0

@@ -15,7 +15,7 @@ class SidebarView(ft.Container):
         self.padding = 10
         self.animate = ft.Animation(300, ft.AnimationCurve.DECELERATE)
 
-        self.chat_list = ft.Column(scroll=ft.ScrollMode.ADAPTIVE)
+        self.chat_list = ft.Column(scroll=ft.ScrollMode.ADAPTIVE, expand=True)
         self.chats_label = ft.Text("Chats", weight=ft.FontWeight.BOLD)
         self.new_chat_btn = ft.Button(
             on_click=self.on_new_chat,
@@ -30,7 +30,10 @@ class SidebarView(ft.Container):
                 self.new_chat_btn,
                 self.chats_label,
                 ft.Divider(),
-                self.chat_list,
+                ft.Container(
+                    content=self.chat_list,
+                    expand=True,
+                ),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             tight=True,
