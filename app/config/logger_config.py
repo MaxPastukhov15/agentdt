@@ -1,8 +1,8 @@
 import logging.config
+import pythonjsonlogger
+from .config import paths
 
-from .config import settings
-
-log_dir = settings.base_dir / "logs"
+log_dir = paths.data_dir / "logs"
 log_dir.mkdir(parents=True, exist_ok=True)
 
 LOGGING = {
@@ -10,8 +10,8 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
+            "()": pythonjsonlogger.json.JsonFormatter,
             "format": "%(asctime)s %(levelname)s %(message)s %(module)s",
-            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
         },
         "print": {"format": "%(levelname)s %(message)s", "class": "logging.Formatter"},
     },

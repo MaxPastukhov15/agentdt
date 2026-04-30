@@ -3,6 +3,7 @@ import os
 import flet as ft
 from config.config import settings
 from dotenv import set_key
+from pydantic import SecretStr
 
 
 class LoginView(ft.Container):
@@ -42,12 +43,23 @@ class LoginView(ft.Container):
             self.update()
             return
 
-        env_path = os.path.join(os.getcwd(), ".env")
+        env_path = settings.env_path
 
         try:
             set_key(env_path, "OPENROUTER_API_KEY", api_key)
 
-            from pydantic import SecretStr
+            set_key(env_path, "PHOENIX_COLLECTOR_ENDPOINT", "http://localhost:6006/v1/traces")
+            set_key(env_path, "USER_AGENT", "DesktopAgentCH")
+
+            set_key(env_path, "MAIN_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
+            set_key(env_path, "SUMMARIZATION_MODEL", "baidu/qianfan-ocr-fast:free")
+            set_key(env_path, "EMBEDDING_MODEL", "BAAI/bge-m3")
+
+            set_key(env_path, "HF_HUB_OFFLINE", "1")
+
+            set_key(env_path, "TRANSFORMERS_OFFLINE", "1")
+
+            set_key(env_path, "MAX_STEPS", "7")
 
             settings.openrouter_api_key = SecretStr(api_key)
             os.environ["OPENROUTER_API_KEY"] = api_key

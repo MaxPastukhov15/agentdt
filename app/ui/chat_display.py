@@ -21,17 +21,45 @@ class ChatMessage(ft.Column):
             icon=ft.Icons.LIBRARY_BOOKS_OUTLINED, tooltip="Показать источники", icon_size=14, visible=len(self.saved_links) > 0, on_click=self._handle_show_sources
         )
 
+        self.loader = ft.ProgressRing(
+            width=14, height=14, stroke_width=2, 
+            visible=False, color=ft.Colors.BLUE_ACCENT
+        )
+
+        self.ai_icon = ft.Icon(ft.Icons.AUTO_AWESOME, size=14, color=ft.Colors.GREY_500)
+
+        self.icon_stack = ft.Stack(
+            controls=[self.ai_icon, self.loader],
+            width=14, height=14)
+
+        self.status_text = ft.Text(value="", size=12, color=ft.Colors.GREY_500, italic=True,)
+
         self.switcher = ft.AnimatedSwitcher(
-            content=self.text_control,
+            content=self.status_text,
             transition=ft.AnimatedSwitcherTransition.FADE,
             duration=400,
             reverse_duration=200,
             switch_in_curve=ft.AnimationCurve.EASE_OUT,
         )
 
+        self.status_row = ft.Row(
+            controls=[
+                self.icon_stack,
+                self.switcher
+            ],
+            visible=False,
+            alignment=ft.MainAxisAlignment.START,
+        )
+
+        message_content = [
+            self.status_row if not is_user else ft.Container(height=0, width=0, padding=0, margin=0),
+            self.text_control,
+            ft.Row([self.sources_btn], alignment=ft.MainAxisAlignment.END) if not is_user else ft.Container()
+        ]
+
         self.controls = [
             ft.Container(
-                content=ft.Column([self.switcher, ft.Row([self.sources_btn], alignment=ft.MainAxisAlignment.END) if not is_user else ft.Container()], spacing=0),
+                content=ft.Column(message_content, spacing=0),
                 bgcolor=ft.Colors.RED_50 if is_user else ft.Colors.SURFACE_BRIGHT,
                 border_radius=15,
                 padding=10,
@@ -40,6 +68,15 @@ class ChatMessage(ft.Column):
         ]
 
         self.horizontal_alignment = ft.CrossAxisAlignment.END if is_user else ft.CrossAxisAlignment.START
+    
+    def set_loading(self, is_loading: bool):
+        try:
+            self.loader.visible = is_loading
+            self.ai_icon.opacity = 0.3 if is_loading else 1.0
+            if self.page:
+                self.update()
+        except Exception as e:
+            print(f"Error setting loading: {e}")
 
     def _handle_show_sources(self, e):
         if self.on_show_sources and self.saved_links:
@@ -61,15 +98,21 @@ class ChatMessage(ft.Column):
         try:
             self.text_control.value = text
             if self.page:
-                self.switcher.content = ft.Markdown(
-                    value=text,
-                    selectable=True,
-                    extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-                    code_theme=ft.MarkdownCodeTheme.GITHUB,
+                self.text_control.update()
+        except Exception as e:
+            print(f"Error updating text: {e}")
+    
+    def update_status(self, status: str, visible: bool = True):
+        try:
+            self.status_row.visible = visible
+            if self.page:
+                self.switcher.content = ft.Text(
+                value=status, size=12,
+                color=ft.Colors.GREY_500, italic=True,
                 )
                 self.switcher.update()
         except Exception as e:
-            print(f"Error updating text: {e}")
+            print(f"Error updating status: {e}")
 
 
 class ChatHistoryView(ft.ListView):

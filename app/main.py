@@ -2,6 +2,8 @@ import os
 
 os.environ["USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AI-Agent/1.0"
 
+import config.logger_config
+
 import multiprocessing
 
 import flet as ft

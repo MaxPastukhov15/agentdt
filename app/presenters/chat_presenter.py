@@ -3,7 +3,7 @@ import asyncio
 import flet as ft
 from core.agent import Agent
 from core.chat_manager import ChatManager
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage, AIMessageChunk
 from presenters.app_model import AppModel
 from ui.chat_display import ChatHistoryView
 from ui.input_field import ChatInput
@@ -138,46 +138,60 @@ class ChatPresenter:
         config = {"configurable": {"thread_id": self.current_thread_id}}
         last_links = []
         last_msg = None
+        full_response = ""
+
+        ai_msg.update_status("Думаю...", visible=True)
+        ai_msg.set_loading(True)
+
         try:
-            async for chunk in self.model.app.astream(
+            async for mode, payload in self.model.app.astream(
                 {"messages": [HumanMessage(content=text)]},
                 config=config,
-                stream_mode="values",
+                stream_mode=["values", "messages"],
             ):
-                if chunk.get("messages"):
-                    last_msg = chunk["messages"][-1]
+                if mode == "messages":
+                    chunk, metadata = payload
+                    if isinstance(chunk, AIMessageChunk) and chunk.content:
+                        content = chunk.content if isinstance(chunk.content, str) else str(chunk.content)
+                        full_response += content
+                        ai_msg.update_text(full_response)
 
-                    if isinstance(last_msg, AIMessage) and last_msg.tool_calls:
-                        for tool_call in last_msg.tool_calls:
-                            t_name = tool_call["name"]
-                            t_args = tool_call["args"]
+                elif mode == "values":
+                    if payload.get("messages"):
+                        last_msg = payload["messages"][-1]
 
-                            ai_msg.update_text(f"""*Запуск инструмента {t_name}...*
-                                               \nПараметры: {t_args}""")
+                        if isinstance(last_msg, AIMessage) and last_msg.tool_calls:
+                            for tool_call in last_msg.tool_calls:
+                                t_name = tool_call["name"]
+                                t_args = tool_call["args"]
 
-                    elif isinstance(last_msg, ToolMessage):
-                        content_snippet = str(last_msg.content[:50]) + "..."
-                        ai_msg.update_text(f"*Данные получены: {content_snippet}*\n*Анализирую...*")
+                                ai_msg.update_status(f"""Запуск инструмента {t_name}\nПараметры: {t_args}""", visible=True)
 
-                    elif isinstance(last_msg, AIMessage):
-                        if last_msg.content:
-                            ai_msg.update_text(last_msg.content)
+                        elif isinstance(last_msg, ToolMessage):
+                            ai_msg.update_status(f"Данные получены. Анализирую...", visible=True)
+                        
+                        elif isinstance(last_msg, AIMessage) and last_msg.content:
+                            full_response = last_msg.content
 
-                if chunk.get("citation_links"):
-                    last_links = chunk["citation_links"]
+                    if payload.get("citation_links"):
+                        last_links = payload["citation_links"]
 
             if last_links and last_msg:
+                ai_msg.set_loading(False)
                 unique_links = list(dict.fromkeys(last_links))
                 print(f"DEBUG: Отправляем ссылки в UI: {unique_links}")
+                
                 last_msg.additional_kwargs["citation_links"] = unique_links
+                
                 await self.model.app.aupdate_state(config, {"messages": [last_msg]})
                 ai_msg.update_links(unique_links)
+            ai_msg.update_status("", visible=False)
 
         except Exception as e:
+            ai_msg.set_loading(False)
             print(f"LLM Error: {e}")
             error_display = f"\n\n[Ошибка: {e}]"
-            ai_msg.update_text(error_display)
-
+            ai_msg.update_text(full_response + error_display)
     def cancel_generation(self):
         if self.current_task and not self.current_task.done():
             self.current_task.cancel()

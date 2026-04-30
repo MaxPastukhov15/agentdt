@@ -2,11 +2,12 @@ import os
 import uuid
 
 import aiosqlite
+from config.config import settings
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 
 class ChatManager:
-    def __init__(self, path="C:/chat_history/agent_history.db") -> None:
+    def __init__(self, path=settings.chat_history_path) -> None:
         """
         Initializes the ChatManager with a database connection.
 
