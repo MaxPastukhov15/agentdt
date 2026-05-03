@@ -3,11 +3,12 @@ import asyncio
 import flet as ft
 from core.agent import Agent
 from core.chat_manager import ChatManager
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage, AIMessageChunk
-from presenters.app_model import AppModel
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 from ui.chat_display import ChatHistoryView
 from ui.input_field import ChatInput
 from utils.text_cleaner import clean_text
+
+from presenters.app_model import AppModel
 
 
 class ChatPresenter:
@@ -17,7 +18,6 @@ class ChatPresenter:
         self.chat_manager = chat_manager
         self.current_thread_id = None
 
-        # Создаем View-компоненты чата
         self.history_view = ChatHistoryView()
         self.input_view = ChatInput(on_send=self.handle_send, on_cancel=self.cancel_generation)
 
@@ -168,8 +168,8 @@ class ChatPresenter:
                                 ai_msg.update_status(f"""Запуск инструмента {t_name}\nПараметры: {t_args}""", visible=True)
 
                         elif isinstance(last_msg, ToolMessage):
-                            ai_msg.update_status(f"Данные получены. Анализирую...", visible=True)
-                        
+                            ai_msg.update_status("Данные получены. Анализирую...", visible=True)
+
                         elif isinstance(last_msg, AIMessage) and last_msg.content:
                             full_response = last_msg.content
 
@@ -180,9 +180,9 @@ class ChatPresenter:
                 ai_msg.set_loading(False)
                 unique_links = list(dict.fromkeys(last_links))
                 print(f"DEBUG: Отправляем ссылки в UI: {unique_links}")
-                
+
                 last_msg.additional_kwargs["citation_links"] = unique_links
-                
+
                 await self.model.app.aupdate_state(config, {"messages": [last_msg]})
                 ai_msg.update_links(unique_links)
             ai_msg.update_status("", visible=False)
@@ -192,6 +192,7 @@ class ChatPresenter:
             print(f"LLM Error: {e}")
             error_display = f"\n\n[Ошибка: {e}]"
             ai_msg.update_text(full_response + error_display)
+
     def cancel_generation(self):
         if self.current_task and not self.current_task.done():
             self.current_task.cancel()
