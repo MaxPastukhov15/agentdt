@@ -39,7 +39,7 @@ paths = PathManager()
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(case_sensitive=False, env_file_encoding="utf-8", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(case_sensitive=False, env_file_encoding="utf-8", env_file=paths.env_path, extra="ignore")
 
     user_agent: str = "DesktopAgentCH"
     openrouter_api_key: SecretStr = SecretStr("sk-or-v1-...")
@@ -75,5 +75,6 @@ class Settings(BaseSettings):
         path = paths.data_dir / "pdf_docs"
         path.mkdir(parents=True, exist_ok=True)
         return path
+
 
 settings = Settings()

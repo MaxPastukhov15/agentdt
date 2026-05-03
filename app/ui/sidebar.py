@@ -2,8 +2,7 @@ import flet as ft
 
 
 class SidebarView(ft.Container):
-    def __init__(self, on_new_chat, on_chat_selected, 
-                 on_delete_chat, on_rename_chat, on_manage_docs):
+    def __init__(self, on_new_chat, on_chat_selected, on_delete_chat, on_rename_chat, on_manage_docs):
         super().__init__()
         self.on_new_chat = on_new_chat
         self.on_chat_selected = on_chat_selected
@@ -17,10 +16,9 @@ class SidebarView(ft.Container):
         self.padding = 10
         self.animate = ft.Animation(300, ft.AnimationCurve.DECELERATE)
 
-        self.docs_btn = ft.IconButton( 
-            ft.Icons.FOLDER_OPEN, 
+        self.docs_btn = ft.IconButton(
+            ft.Icons.FOLDER_OPEN,
             on_click=self.on_manage_docs,
-
         )
 
         self.chat_list = ft.Column(scroll=ft.ScrollMode.ADAPTIVE, expand=True)

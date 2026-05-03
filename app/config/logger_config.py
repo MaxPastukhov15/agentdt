@@ -1,5 +1,7 @@
 import logging.config
+
 import pythonjsonlogger
+
 from .config import paths
 
 log_dir = paths.data_dir / "logs"
@@ -19,11 +21,7 @@ LOGGING = {
         "file": {"class": "logging.FileHandler", "filename": "logs/app.log", "formatter": "json", "encoding": "utf-8"},
         "tools_file": {"class": "logging.FileHandler", "filename": "logs/tools.log", "formatter": "json", "encoding": "utf-8"},
         "db_file": {"class": "logging.FileHandler", "filename": "logs/db.log", "formatter": "json", "encoding": "utf-8"},
-        "graph_stdout": {
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stdout",
-            "formatter": "print",
-        },
+        "graph_file": {"class": "logging.FileHandler", "filename": "logs/graph.log", "formatter": "json", "encoding": "utf-8"},
     },
     "loggers": {
         "": {"handlers": ["file"], "level": "INFO"},
@@ -38,7 +36,7 @@ LOGGING = {
             "propagate": False,
         },
         "graph": {
-            "handlers": ["graph_stdout"],
+            "handlers": ["graph_file"],
             "level": "INFO",
             "propagate": False,
         },
@@ -46,6 +44,7 @@ LOGGING = {
 }
 
 LOGGING["handlers"]["file"]["filename"] = str(log_dir / "app.log")
+LOGGING["handlers"]["graph_file"]["filename"] = str(log_dir / "graph.log")
 LOGGING["handlers"]["tools_file"]["filename"] = str(log_dir / "tools.log")
 LOGGING["handlers"]["db_file"]["filename"] = str(log_dir / "db.log")
 

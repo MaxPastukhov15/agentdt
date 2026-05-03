@@ -21,18 +21,18 @@ class ChatMessage(ft.Column):
             icon=ft.Icons.LIBRARY_BOOKS_OUTLINED, tooltip="Показать источники", icon_size=14, visible=len(self.saved_links) > 0, on_click=self._handle_show_sources
         )
 
-        self.loader = ft.ProgressRing(
-            width=14, height=14, stroke_width=2, 
-            visible=False, color=ft.Colors.BLUE_ACCENT
-        )
+        self.loader = ft.ProgressRing(width=14, height=14, stroke_width=2, visible=False, color=ft.Colors.BLUE_ACCENT)
 
         self.ai_icon = ft.Icon(ft.Icons.AUTO_AWESOME, size=14, color=ft.Colors.GREY_500)
 
-        self.icon_stack = ft.Stack(
-            controls=[self.ai_icon, self.loader],
-            width=14, height=14)
+        self.icon_stack = ft.Stack(controls=[self.ai_icon, self.loader], width=14, height=14)
 
-        self.status_text = ft.Text(value="", size=12, color=ft.Colors.GREY_500, italic=True,)
+        self.status_text = ft.Text(
+            value="",
+            size=12,
+            color=ft.Colors.GREY_500,
+            italic=True,
+        )
 
         self.switcher = ft.AnimatedSwitcher(
             content=self.status_text,
@@ -43,10 +43,7 @@ class ChatMessage(ft.Column):
         )
 
         self.status_row = ft.Row(
-            controls=[
-                self.icon_stack,
-                self.switcher
-            ],
+            controls=[self.icon_stack, self.switcher],
             visible=False,
             alignment=ft.MainAxisAlignment.START,
         )
@@ -54,7 +51,7 @@ class ChatMessage(ft.Column):
         message_content = [
             self.status_row if not is_user else ft.Container(height=0, width=0, padding=0, margin=0),
             self.text_control,
-            ft.Row([self.sources_btn], alignment=ft.MainAxisAlignment.END) if not is_user else ft.Container()
+            ft.Row([self.sources_btn], alignment=ft.MainAxisAlignment.END) if not is_user else ft.Container(),
         ]
 
         self.controls = [
@@ -68,7 +65,7 @@ class ChatMessage(ft.Column):
         ]
 
         self.horizontal_alignment = ft.CrossAxisAlignment.END if is_user else ft.CrossAxisAlignment.START
-    
+
     def set_loading(self, is_loading: bool):
         try:
             self.loader.visible = is_loading
@@ -101,14 +98,16 @@ class ChatMessage(ft.Column):
                 self.text_control.update()
         except Exception as e:
             print(f"Error updating text: {e}")
-    
+
     def update_status(self, status: str, visible: bool = True):
         try:
             self.status_row.visible = visible
             if self.page:
                 self.switcher.content = ft.Text(
-                value=status, size=12,
-                color=ft.Colors.GREY_500, italic=True,
+                    value=status,
+                    size=12,
+                    color=ft.Colors.GREY_500,
+                    italic=True,
                 )
                 self.switcher.update()
         except Exception as e:

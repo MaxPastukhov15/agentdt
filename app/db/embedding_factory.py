@@ -1,9 +1,8 @@
 import logging
 import os
 
+from config.config import settings
 from langchain_huggingface import HuggingFaceEmbeddings
-
-from app.config.config import settings
 
 logger = logging.getLogger("db")
 

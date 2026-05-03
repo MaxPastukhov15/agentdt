@@ -18,6 +18,8 @@ class LoginView(ft.Container):
             label="OpenRouter API Key", password=True, can_reveal_password=True, width=400, tooltip="Ключ будет сохранен в файле .env", on_submit=self.handle_login
         )
 
+        self.button = ft.ElevatedButton("Сохранить и войти", on_click=self.handle_login, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
+
         self.content = ft.Card(
             content=ft.Container(
                 padding=40,
@@ -27,7 +29,7 @@ class LoginView(ft.Container):
                         ft.Text("Требуется авторизация", size=24, weight=ft.FontWeight.BOLD),
                         ft.Text("Введите ваш API ключ OpenRouter для начала работы(https://openrouter.ai/)", text_align=ft.TextAlign.CENTER),
                         self.key_input,
-                        ft.ElevatedButton("Сохранить и войти", on_click=self.handle_login, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))),
+                        self.button,
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=20,
@@ -37,6 +39,7 @@ class LoginView(ft.Container):
         )
 
     async def handle_login(self, e):
+        self.button.disabled = True
         api_key = self.key_input.value.strip()
         if not api_key or api_key == "sk-or-v1-...":
             self.key_input.error = "Введите корректный ключ"
@@ -69,3 +72,6 @@ class LoginView(ft.Container):
         except Exception as ex:
             self.key_input.error = f"Ошибка сохранения: {ex}"
             self.update()
+
+        finally:
+            self.button.disabled = False

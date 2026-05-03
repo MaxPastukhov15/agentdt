@@ -1,9 +1,6 @@
 import logging
 
 from config.config import settings
-from core.prompts import SYSTEM_PROMPT
-from core.state import AgentState
-from core.tools import TOOLS, tools_by_name
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -14,6 +11,10 @@ from langchain_core.messages import (
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 
+from core.prompts import SYSTEM_PROMPT
+from core.state import AgentState
+from core.tools import TOOLS, tools_by_name
+
 graph_logger = logging.getLogger("graph")
 
 
@@ -22,10 +23,11 @@ class Agent:
         self.llm = ChatOpenAI(
             api_key=settings.openrouter_api_key,
             base_url="https://openrouter.ai/api/v1",
-            model=settings.main_model,
+            model=f"{settings.main_model}, google/gemma-4-26b-a4b-it:free, google/gemma-4-31b-it:free",
             temperature=0.1,
             max_retries=3,
             timeout=60,
+            extra_body={"sort": "provider", "route": "fallback"},
         ).bind_tools(TOOLS)
         self.checkpointer = checkpointer
         self.app = self.make()
@@ -60,8 +62,6 @@ class Agent:
             update["citation_links"] = state.citation_links
 
         response = await self.llm.ainvoke([SystemMessage(content=SYSTEM_PROMPT)] + messages)
-
-        graph_logger.info(f"-----\n{[SystemMessage(content=SYSTEM_PROMPT)] + messages}\n----")
 
         update["messages"] = [response]
 
