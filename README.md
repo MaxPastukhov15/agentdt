@@ -45,7 +45,7 @@
 
 ### Рабочее пространство
 Общайтесь с ассистентом, задавайте вопросы по вашим книгам или просите найти информацию в интернете.
-![interface](docs/readme_files/main.png)
+![interface](docs/readme_files/new_main.png)
 
 ---
 
