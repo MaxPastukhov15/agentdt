@@ -9,7 +9,7 @@ from ui.input_field import ChatInput
 from utils.text_cleaner import clean_text
 
 from presenters.app_model import AppModel
-
+from utils.long_term_mem import load_chat_memory, save_chat_memory
 
 class ChatPresenter:
     def __init__(self, model_core: Agent | AppModel, chat_manager: ChatManager):
@@ -139,13 +139,20 @@ class ChatPresenter:
         last_links = []
         last_msg = None
         full_response = ""
+        
+        saved_summary = load_chat_memory(self.current_thread_id)
+        current_summary = saved_summary
 
         ai_msg.update_status("Думаю...", visible=True)
         ai_msg.set_loading(True)
 
         try:
+            initial_input = {
+            "messages": [HumanMessage(content=text)],
+            "summary": saved_summary}
+
             async for mode, payload in self.model.app.astream(
-                {"messages": [HumanMessage(content=text)]},
+                initial_input,
                 config=config,
                 stream_mode=["values", "messages"],
             ):
@@ -157,6 +164,9 @@ class ChatPresenter:
                         ai_msg.update_text(full_response)
 
                 elif mode == "values":
+                    if payload.get("summary"):
+                        current_summary = payload["summary"]
+
                     if payload.get("messages"):
                         last_msg = payload["messages"][-1]
 
@@ -175,6 +185,10 @@ class ChatPresenter:
 
                     if payload.get("citation_links"):
                         last_links = payload["citation_links"]
+
+            if current_summary != saved_summary and self.current_thread_id is not None:
+                print(f"DEBUG: Обнаружено новое summary, сохраняем для {self.current_thread_id}")
+                save_chat_memory(self.current_thread_id, current_summary)
 
             if last_links and last_msg:
                 ai_msg.set_loading(False)

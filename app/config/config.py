@@ -33,7 +33,12 @@ class PathManager:
         path = self.data_dir / "history"
         path.mkdir(parents=True, exist_ok=True)
         return path / "agent_history.db"
-
+    
+    @property
+    def long_memory(self) -> Path:
+        path = self.data_dir / "memory"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
 paths = PathManager()
 
@@ -49,11 +54,12 @@ class Settings(BaseSettings):
     embedding_model: str = "BAAI/bge-m3"
     hf_hub_offline: str = "1"
     transformers_offline: str = "1"
-    max_steps: int = 7
+    max_steps: int = 4
 
     db_path: Path = paths.db_path
     env_path: Path = paths.env_path
     chat_history_path: Path = paths.chat_history_path
+    long_term_memory: Path = paths.long_memory
 
     @computed_field
     @property

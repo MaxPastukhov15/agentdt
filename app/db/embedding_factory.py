@@ -1,7 +1,7 @@
 import logging
 import os
 
-from config.config import settings
+from app.config.config import settings
 from langchain_huggingface import HuggingFaceEmbeddings
 
 logger = logging.getLogger("db")
@@ -42,7 +42,8 @@ class EmbeddingModel:
                 model_name=model_name,
                 cache_folder=str(cache_path),
                 encode_kwargs={"normalize_embeddings": True},
-                model_kwargs={"local_files_only": local_files_only},
+                model_kwargs={"local_files_only": local_files_only, 
+                            "backend" : "onnx"},
             )
             return embeddings
         except Exception as e:

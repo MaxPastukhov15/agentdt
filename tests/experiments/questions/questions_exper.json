@@ -1,0 +1,186 @@
+{
+  "dataset_name": "Chemistry_AI_Research_Questions",
+  "total_questions": 25,
+  "data": [
+    {
+      "id": 1,
+      "category": "general_chemistry",
+      "tag": "stoichiometry",
+      "difficulty": "easy",
+      "question": "Как связаны между собой молекулярная и эмпирическая формулы вещества, и в каких случаях они могут совпадать?"
+    },
+    {
+      "id": 2,
+      "category": "general_chemistry",
+      "tag": "atomic_structure",
+      "difficulty": "medium",
+      "question": "В чем заключается физический смысл квантовых чисел (n, l, ml, ms) при описании атомной орбитали?"
+    },
+    {
+      "id": 3,
+      "category": "general_chemistry",
+      "tag": "electron_configuration",
+      "difficulty": "easy",
+      "question": "Сформулируйте правило Хунда и объясните его на примере электронной конфигурации атома кислорода."
+    },
+    {
+      "id": 4,
+      "category": "general_chemistry",
+      "tag": "chemical_bonding",
+      "difficulty": "easy",
+      "question": "В чем принципиальное различие между ковалентной и ионной связью с точки зрения поведения электронных пар?"
+    },
+    {
+      "id": 5,
+      "category": "general_chemistry",
+      "tag": "thermodynamics",
+      "difficulty": "medium",
+      "question": "Как изменение энергии Гиббса (delta G) позволяет определить возможность самопроизвольного протекания реакции при постоянных температуре и давлении?"
+    },
+    {
+      "id": 6,
+      "category": "general_chemistry",
+      "tag": "kinetics",
+      "difficulty": "medium",
+      "question": "Каким образом катализатор влияет на энергию активации и скорость химической реакции?"
+    },
+    {
+      "id": 7,
+      "category": "general_chemistry",
+      "tag": "equilibrium",
+      "difficulty": "medium",
+      "question": "Сформулируйте принцип Ле-Шателье и объясните, как повышение давления повлияет на синтез аммиака (N2 + 3H2 <=> 2NH3)?"
+    },
+    {
+      "id": 8,
+      "category": "general_chemistry",
+      "tag": "acid_base",
+      "difficulty": "easy",
+      "question": "Что такое водородный показатель (pH) и как рассчитать его для 0.1 M раствора сильной кислоты?"
+    },
+    {
+      "id": 9,
+      "category": "general_chemistry",
+      "tag": "redox",
+      "difficulty": "easy",
+      "question": "Охарактеризуйте роль окислителя и восстановителя в контексте передачи электронов."
+    },
+    {
+      "id": 10,
+      "category": "general_chemistry",
+      "tag": "coordination_chemistry",
+      "difficulty": "hard",
+      "question": "В чем суть донорно-акцепторного механизма образования связи в комплексных ионах, например, в [Fe(CN)6]3-?"
+    },
+    {
+      "id": 11,
+      "category": "ai_web_research",
+      "tag": "gnn_materials",
+      "difficulty": "hard",
+      "tool": "arxiv",
+      "question": "Найдите последние статьи (2025–2026 гг.) об использовании графовых нейронных сетей (GNN) для предсказания свойств новых органических полупроводников."
+    },
+    {
+      "id": 12,
+      "category": "ai_web_research",
+      "tag": "intermetallics_data",
+      "difficulty": "medium",
+      "tool": "duckduckgo",
+      "question": "Какова точная стандартная энтальпия образования для редких интерметаллидов системы Li-Mg-Zn?"
+    },
+    {
+      "id": 13,
+      "category": "ai_web_research",
+      "tag": "llm_benchmarks",
+      "difficulty": "hard",
+      "tool": "arxiv",
+      "question": "Какие существуют современные бенчмарки (например, ChemLLMBench) для оценки способности больших языковых моделей решать задачи по органическому синтезу?"
+    },
+    {
+      "id": 14,
+      "category": "ai_web_research",
+      "tag": "industry_stats",
+      "difficulty": "medium",
+      "tool": "duckduckgo",
+      "question": "Найдите актуальные данные по мировому производству серной кислоты за 2025 год. Каковы основные экологические ограничения?"
+    },
+    {
+      "id": 15,
+      "category": "ai_web_research",
+      "tag": "quantum_nn_integration",
+      "difficulty": "hard",
+      "tool": "arxiv",
+      "question": "Какие методы квантовой химии сейчас чаще всего интегрируются с нейронными сетями для ускорения расчетов молекулярной динамики?"
+    },
+    {
+      "id": 16,
+      "category": "rag_processing",
+      "tag": "definition_extraction",
+      "context_ref": "Lecture_3",
+      "question": "Основываясь на конспекте лекции 3, дайте определение «степени окисления»."
+    },
+    {
+      "id": 17,
+      "category": "rag_processing",
+      "tag": "mechanism_comparison",
+      "context_ref": "Lecture_11",
+      "question": "На основе лекции 11 выделите ключевые отличия в переходных состояниях механизмов нуклеофильного замещения SN1 и SN2."
+    },
+    {
+      "id": 18,
+      "category": "rag_processing",
+      "tag": "electronic_effects",
+      "context_ref": "Lecture_10",
+      "question": "Как индуктивный и мезомерный эффекты влияют на реакционную способность бензольного кольца согласно материалам лекции 10?"
+    },
+    {
+      "id": 19,
+      "category": "rag_processing",
+      "tag": "synthesis_chain",
+      "context_ref": "General_Notes",
+      "question": "Опишите последовательность превращений от азота воздуха до азотной кислоты, упомянутую в примере стехиометрических расчетов."
+    },
+    {
+      "id": 20,
+      "category": "rag_processing",
+      "tag": "organic_classification",
+      "context_ref": "Lecture_12",
+      "question": "Перечислите основные типы органических реакций, выделенные в лекции 12."
+    },
+    {
+      "id": 21,
+      "category": "statistical_integration",
+      "tag": "thermo_math",
+      "difficulty": "medium",
+      "question": "Как связаны константа равновесия K и стандартная энергия Гиббса delta G0 через универсальную газовую постоянную?"
+    },
+    {
+      "id": 22,
+      "category": "statistical_integration",
+      "tag": "molecular_geometry",
+      "difficulty": "medium",
+      "question": "Почему молекула CO2 является линейной, а молекула SO2 — угловой? Объясните через электронное строение."
+    },
+    {
+      "id": 23,
+      "category": "statistical_integration",
+      "tag": "organic_catalysis",
+      "difficulty": "medium",
+      "question": "Какова роль кислотного катализа при гидротации алкенов и почему он необходим?"
+    },
+    {
+      "id": 24,
+      "category": "statistical_integration",
+      "tag": "biochemistry_redox",
+      "difficulty": "hard",
+      "question": "Объясните суть реакции фотосинтеза как процесса окисления-восстановления, основываясь на полуреакциях из лекции 7."
+    },
+    {
+      "id": 25,
+      "category": "statistical_integration",
+      "tag": "l_moments_vs_mle",
+      "difficulty": "hard",
+      "question": "В чем преимущество использования L-моментов перед методом максимального правдоподобия (MLE) при анализе распределения Вейбулла для малых выборок данных?"
+    }
+  ]
+}

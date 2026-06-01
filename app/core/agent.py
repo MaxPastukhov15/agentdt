@@ -1,36 +1,81 @@
 import logging
+from typing import Optional
 
-from config.config import settings
+from app.config.config import settings
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
-    HumanMessage,
     SystemMessage,
     ToolMessage,
+    trim_messages
 )
 from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langgraph.graph import END, StateGraph
 
-from core.prompts import SYSTEM_PROMPT
-from core.state import AgentState
-from core.tools import TOOLS, tools_by_name
 
+from app.core.prompts import SYSTEM_PROMPT
+from app.core.state import AgentState
+from app.core.tools import TOOLS
+from app.utils.model_context_window import get_context_limit
 graph_logger = logging.getLogger("graph")
 
 
 class Agent:
-    def __init__(self, checkpointer) -> None:
-        self.llm = ChatOpenAI(
-            api_key=settings.openrouter_api_key,
-            base_url="https://openrouter.ai/api/v1",
-            model=f"{settings.main_model}, google/gemma-4-26b-a4b-it:free, google/gemma-4-31b-it:free",
-            temperature=0.1,
-            max_retries=3,
-            timeout=60,
-            extra_body={"sort": "provider", "route": "fallback"},
-        ).bind_tools(TOOLS)
+    def __init__(self, checkpointer, tools: list = TOOLS, model_name: str = settings.main_model, 
+                 tunnel_url: Optional[str] = None, 
+                 system_prompt: str = SYSTEM_PROMPT) -> None:
+        self.tools_by_name = {tool.name: tool for tool in tools}
+
+        self.model_name = model_name
+
+        if tunnel_url:
+            self.base_llm = ChatOllama(
+                base_url=tunnel_url.rstrip("/"),
+                model=self.model_name,
+                temperature=0.1)
+        else:
+            self.base_llm = ChatOpenAI(
+                api_key=settings.openrouter_api_key,
+                base_url="https://openrouter.ai/api/v1",
+                model=self.model_name,
+                temperature=0.1,
+                extra_body={"sort": "provider", "route": "fallback"},
+            )
+
+        self.llm = self.base_llm.bind_tools(tools)
         self.checkpointer = checkpointer
+        self.system_prompt = system_prompt
+
+        try:
+            limit = get_context_limit(self.model_name)
+        except Exception:
+            limit = 64000
+
+        self.trimmer = trim_messages(
+            max_tokens=int(limit * 0.65),
+            strategy="last",
+            token_counter=self.base_llm,
+            include_system=True,
+            allow_partial=False,
+            start_on="human",
+        )
+
         self.app = self.make()
+    
+    async def __summarize_history(self, state: AgentState) -> str:
+        """Вспомогательный метод для генерации суммаризации"""
+        messages = list(state.messages)
+        existing_summary = state.summary
+        
+        summary_prompt = (
+            f"Текущее краткое содержание: {existing_summary}\n\n"
+            f"Обнови краткое содержание беседы, включив новые важные детали из сообщений выше. "
+            f"Пиши максимально сжато, сохраняя только факты и суть запросов пользователя."
+        )
+        
+        response = await self.llm.ainvoke(messages + [SystemMessage(content=summary_prompt)])
+        return str(response.content)
 
     def __entry_node(self, state: AgentState) -> dict:
         messages = state.messages
@@ -42,11 +87,27 @@ class Agent:
             graph_logger.info("No input provided")
             return {"messages": [AIMessage(content="Извините, я не получил текст вашего запроса.")], "step_count": 0}
 
-        return {"messages": [], "step_count": 0}
+        return {"messages": [], "step_count": 0, "citation_links": []}
 
     async def __llm_node(self, state: AgentState) -> dict:
         messages = list(state.messages)
-        update = {"messages": [], "step_count": state.step_count}
+        limit = get_context_limit(self.model_name)
+        current_tokens = self.base_llm.get_num_tokens(str(messages)) 
+        curr_summary = state.summary
+
+        update = {"messages": [], "step_count": state.step_count, "summary": curr_summary}
+
+        if current_tokens > (limit * 0.65):
+            graph_logger.info("Context is filled on 70%. Strarting summarization...")
+            curr_summary = await self.__summarize_history(state)
+            update["summary"] = curr_summary
+
+        enriched_system_prompt = self.system_prompt
+        if curr_summary:
+            enriched_system_prompt += f"\n\nКраткий контекст предыдущих бесед: {curr_summary}"
+
+        trimmed_messages = self.trimmer.invoke(messages)
+
 
         if state.step_count >= settings.max_steps:
             messages.append(
@@ -56,12 +117,10 @@ class Agent:
                 )
             )
 
-        if isinstance(messages[-1], HumanMessage):
-            update["citation_links"] = []
-        else:
-            update["citation_links"] = state.citation_links
+        update["citation_links"] = state.citation_links
 
-        response = await self.llm.ainvoke([SystemMessage(content=SYSTEM_PROMPT)] + messages)
+        full_input = [SystemMessage(content=enriched_system_prompt)] + trimmed_messages
+        response = await self.llm.ainvoke(full_input)
 
         update["messages"] = [response]
 
@@ -69,7 +128,7 @@ class Agent:
             graph_logger.info(f"🔧 Tool calls: {response.tool_calls}\n")
 
         else:
-            graph_logger.info(f"🤖 ИИ: {response.content}\n")
+            graph_logger.info(f"🤖 AI: {response.content}\n")
 
         update["step_count"] += 1
 
@@ -94,7 +153,7 @@ class Agent:
     async def __tool_node(self, state: AgentState) -> dict:
         result, citations = [], []
         for tool_call in state.messages[-1].tool_calls:
-            tool = tools_by_name[tool_call["name"]]
+            tool = self.tools_by_name[tool_call["name"]]
 
             try:
                 observation = await tool.ainvoke(tool_call["args"])

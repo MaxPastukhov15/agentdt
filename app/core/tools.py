@@ -2,15 +2,15 @@ import asyncio
 import logging
 from typing import Any
 
-from db.vectordb import VectorRepository
+from app.db.vectordb import VectorRepository
 from langchain.tools import tool
 from langchain_community.document_loaders.async_html import AsyncHtmlLoader
 from langchain_community.document_transformers import BeautifulSoupTransformer
 from langchain_community.retrievers import ArxivRetriever
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 from langchain_core.documents import Document
-from utils.summarization_chain import create_summarizer
-from utils.text_cleaner import clean_text
+from app.utils.summarization_chain import create_summarizer
+from app.utils.text_cleaner import clean_text
 
 tools_logger = logging.getLogger("tools")
 
@@ -24,40 +24,15 @@ def get_repo(collection_name: str):
     return _REPOS[collection_name]
 
 
-chain = create_summarizer()
 
+async def process_arxiv_doc(doc: Document) -> str:
+    """Очистка без использования сторонней LLM"""
+    content = doc.page_content
 
-async def create_summary(query: str, content: Document) -> tuple[str, str] | str:
-    """Вспомогательная функция для обработки одного документа"""
-
-    try:
-        async with LIMIT:
-            summary = await chain.ainvoke({"context": content.page_content[:300000], "query": query})
-
-        title = content.metadata.get("title", "N/A")
-        author = content.metadata.get("authors", "N/A")
-        link = content.metadata.get("link", "N/A")
-
-        if author != "N/A" and link != "N/A":
-            return (
-                f"{title}, {author}, {link}",
-                summary,
-            )
-        elif author != "N/A":
-            return (
-                f"{title}, {author}",
-                summary,
-            )
-        elif link != "N/A":
-            return (
-                f"{title}, {link}",
-                summary,
-            )
-        else:
-            return (f"{title}", summary)
-
-    except Exception as e:
-        return f"Error processing document: {str(e)}"
+    content = clean_text(content, mode="content")
+    
+    metadata = doc.metadata
+    return f"Title: {metadata.get('Title')}\nAuthors: {metadata.get('Authors')}\nContent: {content}\nLink: {metadata.get('Entry ID')}\n"
 
 
 @tool
@@ -127,26 +102,22 @@ async def search_arxiv(query: str) -> dict[str, Any]:
     - Не цитируйте статью, не проверив её релевантность
     """
 
-    retriever = ArxivRetriever(load_max_docs=1, get_full_documents=True)
+    retriever = ArxivRetriever(load_max_docs=5, get_full_documents=False)
 
     try:
         docs = await asyncio.to_thread(retriever.invoke, query)
-
+    
         if not docs:
-            return {
-                "context": "No relevant Arxiv Research Papers were found",
-                "citations": [],
-            }
+            return {"context": "Статьи не найдены.", "citations": []}
 
-        tasks = [create_summary(query, doc) for doc in docs]
-
-        results = await asyncio.gather(*tasks)
-
-        context = "\n\n".join([res[1] for res in results])
-        citations = [res[0] for res in results]
-
-        tools_logger.info(f"Used for context: {context[:50]}\n\n {citations}" + "...")
-        return {"context": context, "citations": citations}
+        processed_contents = [await process_arxiv_doc(d) for d in docs]
+    
+    
+        full_context = "\n---\n".join(processed_contents)
+        citations = [f"{d.metadata.get('Authors', 'N/A')}; {d.metadata.get('Title', 'N/A')}; {d.metadata.get('Entry ID', 'N/A')}" 
+                     for d in docs]
+    
+        return {"context": full_context, "citations": citations}
 
     except Exception as e:
         return {"context": f"Error during Arxiv search: {str(e)}", "citations": []}
@@ -220,4 +191,11 @@ async def search_duckduckgo(query: str, deep_read: bool = False) -> dict[str, An
 
 
 TOOLS = [search_chemistry_collection, search_arxiv, search_duckduckgo]
-tools_by_name = {tool.name: tool for tool in TOOLS}
+
+def cleanup_repos():
+    for repo in _REPOS.values():
+        try:
+            repo._VectorRepository__close()
+        except Exception:
+            pass
+    _REPOS.clear()

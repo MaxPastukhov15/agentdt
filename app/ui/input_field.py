@@ -5,13 +5,11 @@ import flet as ft
 
 class ChatInput(ft.Container):
     def __init__(self, on_send, on_cancel):
-        super().__init__()
+        super().__init__(padding=ft.padding.symmetric(horizontal=20, vertical=5), alignment = ft.Alignment.BOTTOM_RIGHT,
+            shadow = ft.BoxShadow(blur_radius=50, color=ft.Colors.SURFACE, offset=ft.Offset(0, -5)))
+
         self.on_send = on_send
         self.on_cancel = on_cancel
-
-        self.padding = ft.padding.symmetric(horizontal=20, vertical=5)
-        self.alignment = ft.Alignment.BOTTOM_RIGHT
-        self.shadow = ft.BoxShadow(blur_radius=50, color=ft.Colors.SURFACE, offset=ft.Offset(0, -5))
 
         self.send_button = ft.IconButton(
             icon=ft.Icons.SEND_ROUNDED,

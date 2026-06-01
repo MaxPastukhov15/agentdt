@@ -8,11 +8,8 @@ from pydantic import SecretStr
 
 class LoginView(ft.Container):
     def __init__(self, on_login_success):
-        super().__init__()
+        super().__init__(alignment=ft.alignment.Alignment.CENTER, bgcolor = ft.Colors.WHITE_10, expand=True)
         self.on_login_success = on_login_success
-        self.expand = True
-        self.alignment = ft.alignment.Alignment.CENTER
-        self.bgcolor = ft.Colors.WHITE_10
 
         self.key_input = ft.TextField(
             label="OpenRouter API Key", password=True, can_reveal_password=True, width=400, tooltip="Ключ будет сохранен в файле .env", on_submit=self.handle_login

@@ -1,4 +1,4 @@
-from config.config import settings
+from app.config.config import settings
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableSerializable

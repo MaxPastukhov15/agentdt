@@ -3,18 +3,15 @@ import flet as ft
 
 class SidebarView(ft.Container):
     def __init__(self, on_new_chat, on_chat_selected, on_delete_chat, on_rename_chat, on_manage_docs):
-        super().__init__()
+        super().__init__(width = 400, bgcolor = ft.Colors.SURFACE, padding = 10, 
+                         animate = ft.Animation(300, ft.AnimationCurve.DECELERATE))
+        
         self.on_new_chat = on_new_chat
         self.on_chat_selected = on_chat_selected
         self.on_delete_chat = on_delete_chat
         self.on_rename_chat = on_rename_chat
         self.on_manage_docs = on_manage_docs
         self.expanded: bool = True
-
-        self.width = 400
-        self.bgcolor = ft.Colors.SURFACE
-        self.padding = 10
-        self.animate = ft.Animation(300, ft.AnimationCurve.DECELERATE)
 
         self.docs_btn = ft.IconButton(
             ft.Icons.FOLDER_OPEN,

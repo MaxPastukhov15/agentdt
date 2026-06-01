@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Self
 
-from config.config import settings
+from app.config.config import settings
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -20,9 +20,9 @@ from langchain_text_splitters import (
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, VectorParams
 from tqdm import tqdm
-from utils.text_cleaner import clean_text
+from app.utils.text_cleaner import clean_text
 
-from db.embedding_factory import EmbeddingModel
+from app.db.embedding_factory import EmbeddingModel
 
 db_logger = logging.getLogger("db")
 

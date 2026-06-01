@@ -33,6 +33,9 @@ async def main(page: ft.Page):
             if chat_manager is not None:
                 await chat_manager.close()
 
+            from core.tools import cleanup_repos
+            cleanup_repos()
+
             parent = psutil.Process(os.getpid())
             for child in parent.children(recursive=True):
                 child.kill()
@@ -53,7 +56,7 @@ async def main(page: ft.Page):
         await chat_manager.initialize()
 
         agent_instance = Agent(checkpointer=chat_manager.checkpointer)
-        app_graph = agent_instance.make()
+        app_graph = agent_instance.app
 
         model_core = AppModel(agent_instance, chat_manager, app_graph)
         presenter = MainPresenter(page, model_core, chat_manager)

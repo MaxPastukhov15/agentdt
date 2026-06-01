@@ -1,0 +1,71 @@
+- config
+  - config.py
+  - logger_config.py
+  - __init__.py
+  - __pycache__
+    - config.cpython-313.pyc
+    - logger_config.cpython-313.pyc
+    - logger_config.cpython-314.pyc
+    - __init__.cpython-313.pyc
+    - __init__.cpython-314.pyc
+- core
+  - agent.py
+  - chat_manager.py
+  - prompts.py
+  - state.py
+  - tools.py
+  - __init__.py
+  - __pycache__
+    - agent.cpython-313.pyc
+    - chat_manager.cpython-313.pyc
+    - prompts.cpython-313.pyc
+    - state.cpython-313.pyc
+    - tools.cpython-313.pyc
+    - __init__.cpython-313.pyc
+- db
+  - embedding_factory.py
+  - vectordb.py
+  - __init__.py
+  - __pycache__
+    - embedding_factory.cpython-313.pyc
+    - vectordb.cpython-313.pyc
+    - __init__.cpython-313.pyc
+- main.py
+- presenters
+  - app_model.py
+  - chat_presenter.py
+  - main_presenter.py
+  - __init__.py
+  - __pycache__
+    - app_model.cpython-313.pyc
+    - chat_presenter.cpython-313.pyc
+    - main_presenter.cpython-313.pyc
+    - __init__.cpython-313.pyc
+- ui
+  - chat_display.py
+  - input_field.py
+  - login_page.py
+  - sidebar.py
+  - __init__.py
+  - __pycache__
+    - chat_display.cpython-313.pyc
+    - input_field.cpython-313.pyc
+    - login_page.cpython-313.pyc
+    - sidebar.cpython-313.pyc
+    - __init__.cpython-313.pyc
+- utils
+  - icon_path.py
+  - long_term_mem.py
+  - model_context_window.py
+  - summarization_chain.py
+  - text_cleaner.py
+  - __init__.py
+  - __pycache__
+    - icon_path.cpython-313.pyc
+    - model_context_window.cpython-313.pyc
+    - summarization_chain.cpython-313.pyc
+    - text_cleaner.cpython-313.pyc
+    - __init__.cpython-313.pyc
+- __init__.py
+- __pycache__
+  - __init__.cpython-313.pyc
